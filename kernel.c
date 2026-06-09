@@ -478,26 +478,77 @@ void initInputData(char *video_memory)
                     else if (inputdata[0] == 'r' && inputdata[1] == 'e' && inputdata[2] == 'a' &&
                              inputdata[3] == 'd')
                     {
+
                         if (inputdata[4] == '\0')
                         {
                             print("Error: Please provide a filename! Example: makefile hi.txt\n", 0x0F, video_memory, 0);
                         }
                         char *filename = &inputdata[5];
-                        readfiles(filename,video_memory);
+                        readfiles(filename, video_memory);
                     }
-                         else if (inputdata[0] == 'l' && inputdata[1] == 'i' && inputdata[2] == 's' &&
-                                    inputdata[3] == 't')
+                    else if (inputdata[0] == 'l' && inputdata[1] == 'i' && inputdata[2] == 's' &&
+                             inputdata[3] == 't')
                     {
-                       
+
                         for (int i = 0; i < MAX_FILES; i++)
                         {
-
                             print(directory_table[i].name, 0x0F, video_memory, 0);
-                            print("\n", 0x0F, video_memory, 0);
-
+                            print(" ", 0x0F, video_memory, 0);
                         }
-                        
+                        print("\n", 0x0F, video_memory, 0);
+                    }
+                    else if (inputdata[0] == 'd' && inputdata[1] == 'e' && inputdata[2] == 'l')
+                    {
+                        format_disk_directory();
+                    }
+                    else if (inputdata[0] == 'h' && inputdata[1] == 'e' && inputdata[2] == 'l' && inputdata[3] == 'p')
+                    {
 
+                        print(" command 1: clear \n command 2: display [string value] \n command 3: makefile [filename] \n command 4: read [filename] \n command 5: del---> remove all files \n command 6: list--> all files \n command 7: loop [value] string", 0x0F, video_memory, 0);
+                        print("\n", 0x0F, video_memory, 0);
+                    }
+                    else if (inputdata[0] == 'l' && inputdata[1] == 'o' && inputdata[2] == 'o' && inputdata[3] == 'p')
+                    {
+
+                        int idx = 4;
+
+                        while (inputdata[idx] == ' ')
+                        {
+                            idx++;
+                        }
+
+                        int cycles = 0;
+
+                        while (inputdata[idx] >= '0' && inputdata[idx] <= '9')
+                        {
+                            cycles = cycles * 10 + (inputdata[idx] - '0');
+                            idx++;
+                        }
+
+                        while (inputdata[idx] == ' ')
+                        {
+                            idx++;
+                        }
+
+                        char *data = &inputdata[idx];
+
+                        if (cycles > 0 && cycles <= 1999 && *data != '\0')
+                        {
+                            for (int i = 0; i < cycles; i++)
+                            {
+                                print("%d ", 0x0F, video_memory, &i);
+
+                                print(data, 0x0F, video_memory, 0);
+                                print("\n", 0x0F, video_memory, 0);
+                            }
+                        }
+                        else
+                        {
+                            print("Error: Loop count must be 1-1999 and contain text.\n",
+                                  0x0F,
+                                  video_memory,
+                                  0);
+                        }
                     }
 
                     else
