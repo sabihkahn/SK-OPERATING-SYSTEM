@@ -23,7 +23,7 @@
 SKOS is a from-scratch operating system written in **C** and **x86 assembly**. GRUB loads the Multiboot kernel, which brings up a VGA text console, polls the keyboard via I/O ports, and talks to an ATA IDE disk in PIO mode. A lightweight on-disk file system stores up to **256 files** across dedicated directory and data sectors.
 
 | Layer | Technology |
-|-------|------------|
+|-------|------------|      git
 | Bootloader | GRUB 2 (Multiboot) |
 | Entry | `boot.asm` — stack setup, calls `kernel_main()` |
 | Kernel | `kernel.c` — monolithic, freestanding C |
