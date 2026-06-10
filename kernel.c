@@ -21,6 +21,58 @@ struct FileEntry
 
 struct FileEntry directory_table[MAX_FILES];
 
+#define IMG_WIDTH 16
+#define IMG_HEIGHT 16
+
+// A simple 16x16 image matrix (Color 15 = White, Color 0 = Transparent/Black)
+unsigned char sample_image[256] = {
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15,
+    15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15,
+    15, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 15,
+    15, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 4, 0, 15,
+    15, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 15,
+    15, 0, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 4, 0, 15,
+    15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 15,
+    15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15, 15};
+
+unsigned char vga_registers[] = {
+    // this is a MISCELLANEOUS port (its like a initilizer which init) it tells
+    // vga card how fast to sping dots on screen
+    0x63,
+    /* Sequencer it controll memory timing how different
+       things work , eg: when cpu writes to screen and
+       same time another procees want o change the old data it just
+       all one task to start then other task
+    */
+    0x03, 0x01, 0x0F, 0x00, 0x0E,
+
+    /* Cathode ray tube controller
+    Manages screen timings (horizontal/vertical sync) and cursor position */
+
+    0x5F, 0x4F, 0x50, 0x82, 0x54, 0x80, 0xBF, 0x1F,
+    0x00, 0x41, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x9C, 0x8E, 0x8F, 0x28, 0x40, 0x96, 0xB9, 0xA3,
+    0xFF,
+
+    /* graphics controller  */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x40, 0x05, 0x0F,
+    0xFF,
+    /* attribute controller Handles color palettes and text/graphics mode blinking */
+
+    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
+    0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+    0x41, 0x00, 0x0F, 0x00, 0x00
+
+};
+
 // Load all 10 sectors into memory
 
 unsigned char keyboard_map[128] = {
@@ -345,6 +397,101 @@ void readfiles(char *name, char *video_memory)
     print("File not found on mega table!\n", 0x0F, video_memory, 0);
 }
 
+void write_vga_registers(unsigned char *regis)
+{
+    unsigned int i;
+
+    outb(0x3C2, *regis++);
+
+    for (i = 0; i < 5; i++)
+    {
+
+        outb(0x3C4, i); // Select index (Which sub-register?) 0 - 4 idex
+        //  are we can also do that by just singly adding each of the following
+
+        outb(0x3C5, *regis++);
+    }
+
+    outb(0x3D4, 0x03);
+    outb(0x3D5, inputbyte(0x3D5) | 0x80); // Set bit 7
+    outb(0x3D4, 0x11);
+    outb(0x3D5, inputbyte(0x3D5) & ~0x80); // Clear bit 7
+
+    for (i = 0; i < 25; i++)
+    {
+        outb(0x3D4, i);
+        outb(0x3D5, *regis++);
+    }
+
+    for (i = 0; i < 9; i++)
+    {
+        outb(0x3C6, i);        // Pixel mask (Usually set to 0xFF to see all colors)
+        outb(0x3CE, i);        // Index
+        outb(0x3CF, *regis++); // Data
+    }
+
+    for (i = 0; i < 21; i++)
+    {
+        inputbyte(0x3DA);      // Reset Flip-Flop
+        outb(0x3C0, i);        // Index
+        outb(0x3C0, *regis++); // Data (Wait, why the same port?)
+    }
+
+    inputbyte(0x3DA);
+    outb(0x3C0, 0x20);
+}
+
+void draw_image(int start_x, int start_y, int img_w, int img_h, unsigned char *image_data)
+{
+    unsigned char *graphics_vram = (unsigned char *)0xA0000;
+    for (int i = 0; i < 320 * 200; i++)
+    {
+        if (i < 320 * 100 && i > 320 * 79)
+        {
+            graphics_vram[i] = 0;
+            graphics_vram[320 + i] = 0;
+            graphics_vram[i + 1] = 0;
+            graphics_vram[321 + i] = 0;
+            i++;
+
+        }
+        else
+        {
+            graphics_vram[i] = 15;
+            graphics_vram[320 + i] = 15;
+            graphics_vram[i + 1] = 15;
+            graphics_vram[321 + i] = 15;
+            i++;
+        }
+    }
+}
+
+void enter_graphics_environment()
+{
+    // 1. Switch hardware to 320x200 graphics mode
+    write_vga_registers(vga_registers);
+
+    // 2. Clear graphics memory completely (0 = Black)
+    unsigned char *graphics_vram = (unsigned char *)0xA0000;
+    for (int i = 0; i < 320 * 200; i++)
+    {
+        graphics_vram[i] = 0;
+    }
+
+    // 3. Draw our image array at coordinate coordinates X: 150, Y: 90 (Centered)
+    draw_image(150, 90, IMG_WIDTH, IMG_HEIGHT, sample_image);
+
+    // 4. Stay trapped inside a shell listening loop until 'q' key is intercepted
+    while (1)
+    {
+        char key = getKeyPress();
+        if (key == 'q')
+        {
+            break;
+        }
+    }
+}
+
 void initInputData(char *video_memory)
 {
     int i = 0;
@@ -507,6 +654,19 @@ void initInputData(char *video_memory)
                         print(" command 1: clear \n command 2: display [string value] \n command 3: makefile [filename] \n command 4: read [filename] \n command 5: del---> remove all files \n command 6: list--> all files \n command 7: loop [value] string", 0x0F, video_memory, 0);
                         print("\n", 0x0F, video_memory, 0);
                     }
+
+                    else if (inputdata[0] == 'g' && inputdata[1] == 'u' && inputdata[2] == 'i' && inputdata[3] == 'o' && inputdata[4] == 'n')
+                    {
+
+                        print(" starting gui ...... ", 0x0F, video_memory, 0);
+                        print("\n", 0x0F, video_memory, 0);
+
+                        enter_graphics_environment();
+
+                        cleanscreen(video_memory, 0x00);
+                        print(" ........................   WELCOME BACK to SKOS TEXT MODE ........................ ", 0x0F, video_memory, 0);
+                    }
+
                     else if (inputdata[0] == 'l' && inputdata[1] == 'o' && inputdata[2] == 'o' && inputdata[3] == 'p')
                     {
 
