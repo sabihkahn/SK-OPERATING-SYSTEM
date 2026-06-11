@@ -1579,7 +1579,7 @@ void initInputData(char *video_memory)
                     else if (inputdata[0] == 'h' && inputdata[1] == 'e' && inputdata[2] == 'l' && inputdata[3] == 'p')
                     {
 
-                        print(" command 1: clear \n command 2: display [string value] \n command 3: makefile [filename] \n command 4: read [filename] \n command 5: del---> remove all files \n command 6: list--> all files \n command 7: loop [value] string", 0x0F, video_memory, 0);
+                        print(" command 1: clear \n command 2: display [string value] \n command 3: makefile [filename] \n command 4: read [filename] \n command 5: del---> remove all files \n command 6: list--> all files \n command 7: loop [value] string \n command 8: guion \n command 9: showimg \n command 10: view [image name] \n", 0x0F, video_memory, 0);
                         print("\n", 0x0F, video_memory, 0);
                     }
 
